@@ -1,0 +1,43 @@
+#R analysis with limma
+#This example uses single cell RNA seq data from human samples of control, SLS, and SLE conditions.
+
+#Free up workspace if needed
+#rm(list = ls())
+
+#print working directory
+getwd()
+
+#import necessary libraries
+library(tidyverse)
+library(limma)
+library(edgeR)
+library(ggrepel)
+
+#Set up raw counts matrix, sample info TSV, and genome annotation TSV
+
+
+#turn raw counts matrix into DGEList object = x
+counts_data <- read.delim("data/raw_counts.tsv", header = TRUE, row.names = 1, check.names = FALSE)
+sample_info <- read.delim("data/sample_info.tsv", header = TRUE, stringsAsFactors=FALSE)
+counts_table <- DGEList(counts_data, samples=sample_info$SampleName, group=sample_info$Status)
+
+
+#first convert raw counts to CPM in preparation for removing lowly expressed genes, use this value + minimum sample size (11) in Limma step
+cpm <- cpm(counts_table)
+
+#subsets a DGEList object (y) to retain only filtered genes (keep) while recomputing library sizes. Setting keep.lib.sizes=FALSE updates library sizes to reflect the sum of #counts only for the remaining genes, which is recommended when filtering lowly expressed genes prior to normalization. 
+keep.exprs <- filterByExpr(counts_table, group=group)
+counts_table <- counts_table[keep.exprs,, keep.lib.sizes=FALSE]
+counts_table <- calcNormFactors(counts_table,method =c("TMM"))
+
+#find size after filtering
+dim(counts_table)
+
+#filter out lowly expressed genes and normalize
+keep.exprs <- filterByExpr(counts_table)
+counts_table <- counts_table[keep.exprs, keep.lib.sizes=FALSE]
+counts_table <- calcNormFactors(counts_table,method =c("TMM"))
+
+
+glMDSPlot(counts_table)
+glimmaVolcano(counts_table)
